@@ -28,40 +28,14 @@ fi
 # returns a failure for production.cloudfront.docker.com, which is where
 # Docker Hub stores image blobs, so a normal `docker build` cannot fetch
 # ubuntu:24.04. A BuildKit container pointed at public resolvers can.
-builder=openscad-arm64
-bk_container=buildx_buildkit_openscad-arm640
-bk_image=moby/buildkit:buildx-stable-1
-
-if ! "${docker_cmd[@]}" image inspect "$bk_image" >/dev/null 2>&1; then
-  echo "The local image $bk_image is required. Docker cannot pull it while its DNS resolver fails." >&2
-  exit 1
-fi
-
-if ! "${docker_cmd[@]}" buildx inspect "$builder" >/dev/null 2>&1; then
-  "${docker_cmd[@]}" buildx create --name "$builder" --driver docker-container \
-    --driver-opt "image=$bk_image" >/dev/null
-fi
-
-bk_dns=""
-if "${docker_cmd[@]}" container inspect "$bk_container" >/dev/null 2>&1; then
-  bk_dns=$("${docker_cmd[@]}" inspect --format '{{join .HostConfig.Dns " "}}' "$bk_container")
-fi
-if [[ "$bk_dns" != *8.8.8.8* ]]; then
-  if "${docker_cmd[@]}" container inspect "$bk_container" >/dev/null 2>&1; then
-    "${docker_cmd[@]}" rm -f "$bk_container" >/dev/null
-  fi
-  "${docker_cmd[@]}" run -d --name "$bk_container" --privileged --init \
-    --dns 8.8.8.8 --dns 1.1.1.1 \
-    --restart unless-stopped \
-    -v "${bk_container}_state:/var/lib/buildkit" \
-    "$bk_image" \
-    --allow-insecure-entitlement=network.host >/dev/null
-fi
-"${docker_cmd[@]}" buildx inspect --bootstrap "$builder" >/dev/null
+# shellcheck disable=SC1091
+source "$root/docker/macos-arm64/ensure-builder.sh"
+ensure_buildx_builder
 
 echo "Building the OpenSCAD Apple Silicon image..."
 "${docker_cmd[@]}" buildx build \
-  --builder "$builder" \
+  --builder "$openscad_builder" \
+  --target export \
   --progress=plain \
   --load \
   -t openscad-macos-arm64:latest \

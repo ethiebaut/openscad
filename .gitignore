@@ -1,5 +1,6 @@
 /build*
 !/build.sh
+!/build-gui.sh
 /output/
 .venv
 .uuid

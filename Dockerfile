@@ -1,6 +1,10 @@
-# Cross-compile OpenSCAD into a macOS Apple Silicon (arm64) command-line binary.
+# Cross-compile OpenSCAD into a macOS Apple Silicon (arm64) binary.
 #
-# ./build.sh builds this image and writes the Mach-O executable to output/openscad.
+# ./build.sh builds the headless target "export" and writes the Mach-O
+# executable to output/openscad.
+# ./build-gui.sh builds the Qt GUI target "gui-export". That target starts
+# from the same "deps" stage as the headless build, so the osxcross toolchain
+# and static libraries are shared layers.
 # The macOS 15.5 SDK is downloaded during the image build for osxcross. Using it
 # is subject to Apple's Xcode license terms.
 
@@ -66,3 +70,22 @@ COPY --from=build /opt/openscad-dist /opt/openscad-dist
 COPY docker/macos-arm64/export-output.sh /usr/local/bin/export-output.sh
 RUN chmod +x /usr/local/bin/export-output.sh
 ENTRYPOINT ["/usr/local/bin/export-output.sh"]
+
+# Qt and the GUI application extend the headless dependency stage.
+FROM deps AS qt
+COPY patches/qscintilla-2.14.1-a11y-textrange-crash.patch /tmp/qscintilla.patch
+COPY docker/macos-arm64/build-qt.sh /tmp/build-qt.sh
+RUN chmod +x /tmp/build-qt.sh && /tmp/build-qt.sh
+
+FROM qt AS gui-build
+COPY . /src/openscad
+COPY docker/macos-arm64/build-openscad-gui.sh /tmp/build-openscad-gui.sh
+COPY docker/macos-arm64/bundle-mac-app.py /tmp/bundle-mac-app.py
+RUN chmod +x /tmp/build-openscad-gui.sh /tmp/bundle-mac-app.py \
+    && /tmp/build-openscad-gui.sh
+
+FROM base AS gui-export
+COPY --from=gui-build /opt/openscad-gui/OpenSCAD.app /opt/openscad-gui/OpenSCAD.app
+COPY docker/macos-arm64/export-gui.sh /usr/local/bin/export-gui.sh
+RUN chmod +x /usr/local/bin/export-gui.sh
+ENTRYPOINT ["/usr/local/bin/export-gui.sh"]
