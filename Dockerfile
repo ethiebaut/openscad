@@ -61,9 +61,7 @@ COPY . /src/openscad
 COPY docker/macos-arm64/build-openscad.sh /tmp/build-openscad.sh
 RUN chmod +x /tmp/build-openscad.sh && /tmp/build-openscad.sh
 
-FROM ubuntu:24.04 AS export
-RUN apt-get update && apt-get install -y --no-install-recommends file \
-    && rm -rf /var/lib/apt/lists/*
+FROM base AS export
 COPY --from=build /opt/openscad-dist /opt/openscad-dist
 COPY docker/macos-arm64/export-output.sh /usr/local/bin/export-output.sh
 RUN chmod +x /usr/local/bin/export-output.sh
