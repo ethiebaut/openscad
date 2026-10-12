@@ -1,0 +1,16 @@
+.git
+.github
+output
+build
+build-*
+**/.cache
+*.dmg
+*.app
+tests
+submodules/manifold/extras
+submodules/mimalloc/docs
+submodules/mimalloc/ide
+submodules/OpenCSG/doc
+submodules/Clipper2/CSharp
+submodules/Clipper2/DLL
+submodules/Clipper2/Tests
