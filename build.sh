@@ -15,6 +15,14 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$root"
 mkdir -p output
 
+# The Docker build context is this working tree. CMake fails if the vendored
+# libraries (mimalloc, Clipper2, manifold, sanitizers-cmake, OpenCSG) are
+# still the empty directories left by a clone without --recurse-submodules.
+if [[ -f .gitmodules ]]; then
+  echo "Checking out git submodules..."
+  git submodule update --init --recursive
+fi
+
 if docker info >/dev/null 2>&1; then
   docker_cmd=(docker)
 elif sudo docker info >/dev/null 2>&1; then
